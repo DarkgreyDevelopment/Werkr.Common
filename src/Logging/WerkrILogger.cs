@@ -20,9 +20,7 @@ namespace Werkr.Common.Logging {
         /// <typeparam name="TState">The type of the state to begin scope for.</typeparam>
         /// <param name="state">The identifier for the scope.</param>
         /// <returns>An IDisposable that ends the logical operation scope on dispose.</returns>
-        public IDisposable BeginScope<TState>( TState state ) {
-            return state != null ? default : (IDisposable)null;
-        }
+        public IDisposable BeginScope<TState>( TState state ) => state != null ? default : null;
 
         /// <summary>
         /// Checks if logging is enabled for the specified log level.
@@ -30,24 +28,16 @@ namespace Werkr.Common.Logging {
         /// <param name="logLevel">The log level to check.</param>
         /// <returns>True if logging is enabled, false otherwise.</returns>
         public bool IsEnabled( LogLevel logLevel ) {
-            switch (logLevel) {
-                case LogLevel.Critical:
-                    return IsFatalEnabled( );
-                case LogLevel.Error:
-                    return IsErrorEnabled( );
-                case LogLevel.Warning:
-                    return IsWarnEnabled( );
-                case LogLevel.Information:
-                    return IsInfoEnabled( );
-                case LogLevel.Debug:
-                    return IsDebugEnabled( );
-                case LogLevel.Trace:
-                    return IsDebugEnabled( );
-                case LogLevel.None:
-                    return false;
-                default:
-                    throw new ArgumentOutOfRangeException( nameof( logLevel ) );
-            }
+            return logLevel switch {
+                LogLevel.Critical => IsFatalEnabled( ),
+                LogLevel.Error => IsErrorEnabled( ),
+                LogLevel.Warning => IsWarnEnabled( ),
+                LogLevel.Information => IsInfoEnabled( ),
+                LogLevel.Debug => IsDebugEnabled( ),
+                LogLevel.Trace => IsDebugEnabled( ),
+                LogLevel.None => false,
+                _ => throw new ArgumentOutOfRangeException( nameof( logLevel ) ),
+            };
         }
 
         private bool IsFatalEnabled( ) => Log4NetLog?.IsFatalEnabled ?? false;
