@@ -5,8 +5,8 @@ using log4net;
 using log4net.Config;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
@@ -17,25 +17,26 @@ namespace Werkr.Common.Logging {
             string serviceName,
             string configPath = null
         ) {
-            if (configPath == null) { configPath = Path.Combine( AppContext.BaseDirectory, "log4net.config" ); }
+            configPath ??= Path.Combine( AppContext.BaseDirectory, "log4net.config" );
             ConfigureFromLog4NetXmlConfigFile( new FileInfo( configPath ) );
 
             IConfigurationSection logSection = builder.Configuration.GetSection( "Logging" );
             // Add Open Telemetry Tracing
             if (logSection["OTLP:EnableTelemetry"]?.ToLower( ) == "true") {
-                _ = builder.Services.AddOpenTelemetryTracing(
-                    tpb => {
-                        _ = tpb
-                            .AddHttpClientInstrumentation( )
-                            .AddAspNetCoreInstrumentation( )
-                            .AddGrpcClientInstrumentation( )
-                            .AddSource( serviceName )
-                            .SetResourceBuilder( ResourceBuilder.CreateDefault( ).AddService( serviceName ) )
-                            .AddOtlpExporter( a =>
-                                a.Endpoint = new Uri( logSection["OTLP:CollectorAddress"] )
-                            );
-                    }
-                );
+                _ = builder
+                    .Services
+                    .AddOpenTelemetry( )
+                    .WithTracing(
+                        builder => builder
+                                    .AddHttpClientInstrumentation( )
+                                    .AddAspNetCoreInstrumentation( )
+                                    .AddGrpcClientInstrumentation( )
+                                    .AddSource( serviceName )
+                                    .SetResourceBuilder( ResourceBuilder.CreateDefault( ).AddService( serviceName ) )
+                                    .AddOtlpExporter( a =>
+                                        a.Endpoint = new Uri( logSection["OTLP:CollectorAddress"] )
+                                    )
+                    ).StartWithHost( );
             }
 
             _ = builder.Logging.AddProvider( new Log4NetProvider( new WerkrILogger( serviceName ) ) );
